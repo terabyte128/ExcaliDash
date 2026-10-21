@@ -1,6 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
-import { SLIDE_TEMPLATES, type SlideTemplateId } from "./slideTemplates";
+import {
+  SLIDE_TEMPLATES,
+  getLastUsedSlideTemplate,
+  type SlideTemplateId,
+} from "./slideTemplates";
 
 function LayoutIcon({ template }: { template: SlideTemplateId }) {
   return (
@@ -49,6 +53,53 @@ export function AddSlideDropdown({
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const menuId = useId();
+
+  useEffect(() => {
+    if (disabled) return;
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.repeat ||
+        !event.shiftKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        (event.code !== "KeyN" && event.key.toLowerCase() !== "n")
+      )
+        return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (
+        target?.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"]',
+        ) ||
+        Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '[role="dialog"][aria-modal="true"], dialog[open]',
+          ),
+        ).some(
+          (dialog) =>
+            // Excalidraw labels its inline font/color controls as modals too.
+            !dialog.matches(
+              ".FontPicker__container, .color-picker-container",
+            ) && dialog.getClientRects().length > 0,
+        )
+      )
+        return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const previous = getLastUsedSlideTemplate();
+      if (event.altKey && previous) {
+        setOpen(false);
+        onSelect(previous);
+      } else {
+        setOpen(true);
+        // Opening an already-open menu does not rerun its focus effect.
+        menu.current?.querySelector<HTMLButtonElement>("button")?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleShortcut, true);
+    return () => window.removeEventListener("keydown", handleShortcut, true);
+  }, [disabled, onSelect]);
 
   useEffect(() => {
     if (!open) return;
@@ -112,6 +163,8 @@ export function AddSlideDropdown({
         type="button"
         disabled={disabled}
         aria-haspopup="menu"
+        aria-keyshortcuts="Shift+N Alt+Shift+N"
+        title="Add slide (Shift+N) · Repeat last layout (Shift+Alt+N)"
         aria-expanded={open && !disabled}
         aria-controls={open && !disabled ? menuId : undefined}
         className={`ui-button-secondary h-10 gap-2 px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${open ? "bg-indigo-50 dark:bg-neutral-700" : ""}`}
@@ -161,6 +214,16 @@ export function AddSlideDropdown({
               </span>
             </button>
           ))}
+          <div className="mt-1 border-t border-slate-100 px-3 py-2 text-[11px] text-slate-500 dark:border-neutral-800 dark:text-neutral-400">
+            <span className="flex justify-between gap-3">
+              <span>Open layouts</span>
+              <kbd className="font-sans">Shift+N</kbd>
+            </span>
+            <span className="mt-1 flex justify-between gap-3">
+              <span>Repeat last layout</span>
+              <kbd className="font-sans">Shift+Alt+N</kbd>
+            </span>
+          </div>
         </div>
       )}
     </div>

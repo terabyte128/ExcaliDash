@@ -34,6 +34,10 @@ export const SLIDE_TEMPLATES = [
 ] as const;
 export type SlideTemplateId = (typeof SLIDE_TEMPLATES)[number]["id"];
 
+// Shared by the toolbar and presentation picker for this app session.
+let lastUsedTemplate: SlideTemplateId | null = null;
+export const getLastUsedSlideTemplate = () => lastUsedTemplate;
+
 export function createSlideTemplate(
   id: SlideTemplateId,
   x: number,
@@ -154,4 +158,5 @@ export function insertSlideTemplate(
     viewportZoomFactor: 0.8,
     animate: false,
   });
+  lastUsedTemplate = template;
 }

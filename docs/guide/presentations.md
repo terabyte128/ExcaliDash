@@ -27,6 +27,16 @@ slide. Text and frames are ordinary Excalidraw elements: double-click text to ed
 it, or move and resize elements freely. Undo removes the entire inserted slide
 in one step. Adding templates requires edit access.
 
+### Slide shortcuts
+
+- **Shift+N**: open the Add slide menu, then use **↑ / ↓** or **K / J** and **Enter** to insert.
+- **Shift+Alt+N**: repeat the last template used in this app session, including
+  templates added from presentation setup. If none has been used, opens the menu.
+- **Esc**: close the menu.
+
+These shortcuts are disabled while typing in text, notes, or form fields and
+while a modal dialog is open. Holding a shortcut does not insert repeated slides.
+
 ## Frame ratio prototype
 
 Select the native **Frame tool** (`F`) to show the **New frame ratio** control
