@@ -331,3 +331,68 @@ test("opening an image through a view-only link never attempts to save or upload
     await deleteDrawing(request, drawing.id);
   }
 });
+
+test("view-only guests can present frames but cannot edit notes or order", async ({
+  page,
+  request,
+}) => {
+  await apiSignIn(request);
+  const drawing = await createDrawing(request, {
+    name: `Read-only presentation ${Date.now()}`,
+    elements: [
+      {
+        id: "slide",
+        type: "frame",
+        name: "Shared slide",
+        x: 0,
+        y: 0,
+        width: 640,
+        height: 360,
+        customData: {
+          excalidashPresentation: { notes: "Shared talking points", order: 0 },
+        },
+      },
+    ],
+  });
+  try {
+    const shared = await request.post(
+      `${API_URL}/drawings/${drawing.id}/link-shares`,
+      {
+        headers: await getCsrfHeaders(request),
+        data: { permission: "view" },
+      },
+    );
+    expect(shared.ok()).toBe(true);
+    const writes: string[] = [];
+    page.on("request", (r) => {
+      if (r.method() === "PUT" && r.url().includes(`/drawings/${drawing.id}`))
+        writes.push(r.url());
+    });
+    await page.goto(`/shared/${drawing.id}`);
+    await page
+      .getByRole("button", { name: "Presentation", exact: true })
+      .click();
+    await expect(page.getByLabel("Speaker notes", { exact: true })).toHaveValue(
+      "Shared talking points",
+    );
+    await expect(
+      page.getByLabel("Speaker notes", { exact: true }),
+    ).toHaveAttribute("readonly", "");
+    await expect(
+      page.getByRole("button", { name: /Move Shared slide/ }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Present", exact: true }).click();
+    await expect(page.getByRole("img", { name: "Shared slide" })).toBeVisible();
+    await page.getByRole("button", { name: "Toggle speaker notes" }).click();
+    await expect(page.getByText("Shared talking points")).toBeVisible();
+    await page.getByRole("button", { name: "Exit presentation" }).click();
+    await page.getByRole("button", { name: "Close presentation" }).click();
+    await page.goto("/");
+    expect(writes).toEqual([]);
+    expect((await getDrawing(request, drawing.id)).version).toBe(
+      drawing.version,
+    );
+  } finally {
+    await deleteDrawing(request, drawing.id);
+  }
+});

@@ -10,6 +10,7 @@ import {
   Download,
   History,
   Loader2,
+  Presentation,
   Share2,
 } from "lucide-react";
 import clsx from "clsx";
@@ -71,6 +72,7 @@ type EditorViewProps = {
   isShareOpen: boolean;
   onCloseShare: () => void;
   onHistoryOpen: () => void;
+  onPresentationOpen: () => void;
   onToggleAutoHide: () => void;
   onToggleTheme: () => void;
 };
@@ -141,6 +143,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   isShareOpen,
   onCloseShare,
   onHistoryOpen,
+  onPresentationOpen,
   onToggleAutoHide,
   onToggleTheme,
 }) => (
@@ -222,6 +225,15 @@ export const EditorView: React.FC<EditorViewProps> = ({
             <History size={20} />
           </button>
         ) : null}
+        <button
+          onClick={onPresentationOpen}
+          disabled={isSceneLoading || !!loadError || isHistoryOpen}
+          className="ui-toolbar-button"
+          title="Presentation"
+          aria-label="Presentation"
+        >
+          <Presentation size={20} />
+        </button>
         {accessLevel === "owner" && id ? (
           <div className="relative inline-flex">
             <button
@@ -328,6 +340,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
           viewModeEnabled={!canEdit || isHistoryOpen}
         >
           <MainMenu>
+            <MainMenu.Item onSelect={onPresentationOpen}>
+              Presentation
+            </MainMenu.Item>
             <MainMenu.Item onSelect={onToggleTheme} shortcut="Shift+Alt+D">
               {theme === "dark" ? "Light mode" : "Dark mode"}
             </MainMenu.Item>

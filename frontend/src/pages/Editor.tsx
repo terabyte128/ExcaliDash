@@ -25,6 +25,8 @@ import { useEditorSceneApi } from "./editor/useEditorSceneApi";
 import { useEditorGridStep } from "./editor/useEditorGridStep";
 import { useKeyboardLayoutFix } from "./editor/useKeyboardLayoutFix";
 import { DEFAULT_GRID_STEP } from "../components/GridStepSelector";
+import { PresentationDialog } from "./editor/PresentationDialog";
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,6 +65,8 @@ const ExcalidrawEditor: React.FC = () => {
   );
   const [gridStep, setGridStep] = usePreference("gridStep", DEFAULT_GRID_STEP);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [presentationAPI, setPresentationAPI] =
+    useState<ExcalidrawImperativeAPI | null>(null);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const [historyPreview, setHistoryPreview] =
@@ -381,9 +385,20 @@ const ExcalidrawEditor: React.FC = () => {
         isShareOpen={isShareOpen}
         onCloseShare={() => setIsShareOpen(false)}
         onHistoryOpen={() => setIsHistoryOpen(true)}
+        onPresentationOpen={() => {
+          if (isReady) setPresentationAPI(excalidrawAPI.current);
+        }}
         onToggleAutoHide={handleToggleAutoHide}
         onToggleTheme={toggleTheme}
       />
+      {presentationAPI && (
+        <PresentationDialog
+          api={presentationAPI}
+          canEdit={canEdit}
+          drawingName={drawingName}
+          onClose={() => setPresentationAPI(null)}
+        />
+      )}
       <EditorDialogs
         drawingId={id}
         historyButtonRef={historyButtonRef}
