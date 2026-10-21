@@ -13,6 +13,23 @@ description: Present your Excalidraw frames as fullscreen slides with saved spea
 4. Click **Present** to start at the selected slide in fullscreen. If your
    browser blocks fullscreen, playback continues in the current window.
 
+## Frame ratio prototype
+
+Select the native **Frame tool** (`F`) to show the **New frame ratio** control
+near the bottom of the canvas. Choose **16:9**, **4:3**, **1:1**, or **Freeform**.
+The selection is remembered in this browser.
+
+When a ratio is selected, a dashed outline previews the final frame while you
+drag. Releasing expands the frame to that outline, preserving everything inside
+your dragged rectangle. Alt-dragging keeps the frame centered. Hold **Shift** to
+bypass the ratio preference and use Excalidraw's native square constraint.
+This applies to newly drawn frames; resizing existing frames remains native.
+
+The prototype uses the public pointer-up callback and element mutation helper;
+it relies on Excalidraw 0.18.1 calling that callback before frame-child assignment
+and the history commit. The browser regression test covers this ordering, undo,
+redo, and peer delivery, and should be run when upgrading Excalidraw.
+
 ## Playback controls
 
 - **Right / Down / Page Down / Space**: next slide.
