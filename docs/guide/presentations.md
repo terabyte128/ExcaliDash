@@ -29,6 +29,10 @@ in one step. Adding templates requires edit access.
 
 ### Slide shortcuts
 
+- **Cmd+Return** (Mac) / **Ctrl+Enter** (Windows/Linux): start playback directly
+  from the canvas or presentation setup. While editing text or a selected
+  line/arrow/image, Excalidraw's existing Enter behavior takes priority.
+
 - **Shift+N**: open the Add slide menu, then use **↑ / ↓** or **K / J** and **Enter** to insert.
 - **Shift+Alt+N**: repeat the last template used in this app session, including
   templates added from presentation setup. If none has been used, opens the menu.

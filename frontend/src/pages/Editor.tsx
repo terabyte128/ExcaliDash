@@ -1,4 +1,7 @@
 import * as api from "../api";
+import { flushSync } from "react-dom";
+import { getSlides } from "./editor/presentation";
+import { toast } from "sonner";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getInitialLangCode } from "../components/LanguageSelector";
@@ -70,6 +73,8 @@ const ExcalidrawEditor: React.FC = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [presentationAPI, setPresentationAPI] =
     useState<ExcalidrawImperativeAPI | null>(null);
+  const [startPresentationImmediately, setStartPresentationImmediately] =
+    useState(false);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const [historyPreview, setHistoryPreview] =
@@ -344,6 +349,85 @@ const ExcalidrawEditor: React.FC = () => {
     user,
   });
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key !== "Enter" ||
+        !(event.metaKey || event.ctrlKey) ||
+        event.altKey ||
+        event.shiftKey ||
+        event.repeat ||
+        event.isComposing ||
+        event.defaultPrevented
+      )
+        return;
+      if (
+        !isReady ||
+        isSceneLoading ||
+        loadError ||
+        isHistoryOpen ||
+        isShareOpen ||
+        presentationAPI ||
+        isRenaming
+      )
+        return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (
+        target?.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"]',
+        )
+      )
+        return;
+      const editor = excalidrawAPI.current;
+      if (!editor) return;
+      const state = editor.getAppState();
+      if (
+        state.editingTextElement ||
+        state.openDialog ||
+        state.editingLinearElement ||
+        state.croppingElementId ||
+        state.newElement ||
+        state.selectedElementsAreBeingDragged
+      )
+        return;
+      const selected = editor
+        .getSceneElements()
+        .filter(
+          (element: { id: string }) => state.selectedElementIds[element.id],
+        );
+      if (
+        selected.length === 1 &&
+        ["line", "arrow", "image"].includes(selected[0].type)
+      )
+        return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (!getSlides(editor.getSceneElements()).length) {
+        toast.info("Create a frame before starting a presentation.");
+        return;
+      }
+      // Mount within the keyboard gesture so the browser permits fullscreen.
+      flushSync(() => {
+        setStartPresentationImmediately(true);
+        setPresentationAPI(editor);
+      });
+      const dialog = document.getElementById("presentation-dialog");
+      void dialog?.requestFullscreen?.().catch(() => {
+        toast.info("Fullscreen was blocked. Presenting in this window.");
+      });
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [
+    isReady,
+    isSceneLoading,
+    loadError,
+    isHistoryOpen,
+    isShareOpen,
+    presentationAPI,
+    isRenaming,
+  ]);
+
   return (
     <>
       <EditorView
@@ -389,7 +473,10 @@ const ExcalidrawEditor: React.FC = () => {
         onCloseShare={() => setIsShareOpen(false)}
         onHistoryOpen={() => setIsHistoryOpen(true)}
         onPresentationOpen={() => {
-          if (isReady) setPresentationAPI(excalidrawAPI.current);
+          if (isReady) {
+            setStartPresentationImmediately(false);
+            setPresentationAPI(excalidrawAPI.current);
+          }
         }}
         onAddSlide={(template) => {
           if (!canEdit || !isReady || isHistoryOpen || !excalidrawAPI.current)
@@ -405,6 +492,7 @@ const ExcalidrawEditor: React.FC = () => {
       {presentationAPI && (
         <PresentationDialog
           api={presentationAPI}
+          startImmediately={startPresentationImmediately}
           canEdit={canEdit}
           drawingName={drawingName}
           onClose={() => setPresentationAPI(null)}

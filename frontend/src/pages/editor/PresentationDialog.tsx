@@ -34,16 +34,20 @@ export function PresentationDialog({
   drawingName,
   onClose,
   onEditCanvas,
+  startImmediately = false,
 }: {
   api: ExcalidrawImperativeAPI;
   canEdit: boolean;
   drawingName: string;
   onClose: () => void;
   onEditCanvas: () => void;
+  startImmediately?: boolean;
 }) {
   const [scene, setScene] = useState(() => readScene(api));
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [playback, setPlayback] = useState<PresentationScene | null>(null);
+  const [playback, setPlayback] = useState<PresentationScene | null>(() =>
+    startImmediately ? structuredClone(readScene(api)) : null,
+  );
   const [position, setPosition] = useState(0);
   const [showNotes, setShowNotes] = useState(false);
   const [fullscreenMessage, setFullscreenMessage] = useState("");
@@ -151,6 +155,30 @@ export function PresentationDialog({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        !playback &&
+        event.key === "Enter" &&
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        !event.repeat &&
+        !event.isComposing
+      ) {
+        const target =
+          event.target instanceof HTMLElement ? event.target : null;
+        if (
+          !target?.closest(
+            'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+          )
+        ) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          root.current
+            ?.querySelector<HTMLButtonElement>("[data-start-presentation]")
+            ?.click();
+          return;
+        }
+      }
       if (event.key === "Tab") {
         revealControls();
         event.stopImmediatePropagation();
@@ -250,6 +278,7 @@ export function PresentationDialog({
   return createPortal(
     <div
       ref={root}
+      id="presentation-dialog"
       role="dialog"
       aria-modal="true"
       aria-label={playback ? "Presentation playback" : "Presentation"}
@@ -309,6 +338,9 @@ export function PresentationDialog({
             <button
               className="ui-button-primary gap-2 px-4"
               onClick={start}
+              data-start-presentation
+              aria-keyshortcuts="Meta+Enter Control+Enter"
+              title="Start presentation (Cmd/Ctrl+Enter)"
               disabled={!slide}
             >
               <Play size={16} />

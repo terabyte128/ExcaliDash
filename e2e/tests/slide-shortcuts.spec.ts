@@ -90,6 +90,19 @@ test("slide shortcuts open layouts, repeat the last template, and respect text e
     await expect(dialog).toBeVisible();
     await expect(menu).toHaveCount(0);
     expect(await savedFrames()).toHaveLength(2);
+    await page.keyboard.press("ControlOrMeta+Enter");
+    const playback = page.getByRole("dialog", {
+      name: "Presentation playback",
+    });
+    await expect(playback).toBeVisible();
+    await page.keyboard.press("Escape");
+    await dialog.getByRole("button", { name: "Close presentation" }).click();
+    await page.locator(".excalidraw").focus();
+    await page.keyboard.press("ControlOrMeta+Enter");
+    await expect(playback).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => !!document.fullscreenElement))
+      .toBe(true);
   } finally {
     await page.goto("/");
     await deleteDrawing(request, drawing.id);
