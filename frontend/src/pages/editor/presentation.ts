@@ -5,6 +5,7 @@ import type {
 } from "@excalidraw/excalidraw/element/types";
 
 const METADATA_KEY = "excalidashPresentation";
+export const SLIDE_ROW_GAP = 120;
 
 export type Slide = {
   frame: ExcalidrawFrameElement;
@@ -72,8 +73,29 @@ export function moveSlide(
   const target = index + direction;
   if (index < 0 || target < 0 || target >= slides.length) return [...elements];
   [slides[index], slides[target]] = [slides[target], slides[index]];
+  // Preserve the slide layout's top-left anchor, regardless of unframed content.
+  let nextX = Math.min(...slides.map((slide) => slide.frame.x));
+  const rowY = Math.min(...slides.map((slide) => slide.frame.y));
+  const translations = new Map<string, { x: number; y: number }>();
+  for (const { frame } of slides) {
+    translations.set(frame.id, { x: nextX - frame.x, y: rowY - frame.y });
+    nextX += frame.width + SLIDE_ROW_GAP;
+  }
+  const arranged = elements.map((element) => {
+    if (element.isDeleted) return element;
+    const offset =
+      translations.get(element.id) ||
+      (element.frameId ? translations.get(element.frameId) : undefined);
+    if (!offset || (!offset.x && !offset.y)) return element;
+    // Translate only frame members. Points, group IDs, bindings, and frame IDs
+    // remain intact; overlapping unframed objects are never adopted or moved.
+    return newElementWith(element, {
+      x: element.x + offset.x,
+      y: element.y + offset.y,
+    });
+  });
   return updateSlideMetadata(
-    elements,
+    arranged,
     new Map(slides.map((slide, order) => [slide.frame.id, { order }])),
   );
 }

@@ -399,7 +399,8 @@ export function PresentationDialog({
               aria-label="Slides"
             >
               <p className="mb-3 text-xs text-slate-500">
-                Each frame is a slide. Rename frames on the canvas.
+                Each frame is a slide. Reordering arranges frames in a
+                horizontal row on the canvas.
               </p>
               <ol className="space-y-2">
                 {slides.map((item, i) => (

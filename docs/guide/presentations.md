@@ -9,7 +9,12 @@ description: Present your Excalidraw frames as fullscreen slides with saved spea
    names become slide titles; frames can have different sizes and aspect ratios.
 2. Choose **Presentation** in the editor toolbar or canvas menu.
 3. Select a slide to preview it and add **Speaker notes**. Use the up/down
-   buttons to change slide order without changing the canvas stacking order.
+   buttons to change slide order. Reordering also arranges frames left-to-right
+   on the canvas, aligned at the current slide layout's top-left corner, with
+   a 120-unit gap. Each frame's existing contents move with it. Unframed objects
+   stay put and aren't adopted by overlapping frames; they can still appear in
+   previews and playback if they overlap a slide. Reordering and positioning are
+   one undo step.
 4. Click **Present** to start at the selected slide in fullscreen. If your
    browser blocks fullscreen, playback continues in the current window.
 

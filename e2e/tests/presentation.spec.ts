@@ -34,6 +34,16 @@ test("frame presentations save notes/order and navigate without changing the sce
         backgroundColor: "#a5d8ff",
         fillStyle: "solid",
       },
+      {
+        id: "unframed",
+        type: "rectangle",
+        x: 820,
+        y: 40,
+        width: 60,
+        height: 60,
+        backgroundColor: "#e03131",
+        fillStyle: "solid",
+      },
     ],
   });
   try {
@@ -81,6 +91,64 @@ test("frame presentations save notes/order and navigate without changing the sce
           ?.customData?.excalidashPresentation;
       })
       .toEqual({ notes: "Welcome to the presentation.", order: 1 });
+
+    const arranged = (await getDrawing(request, drawing.id)).elements!;
+    expect(arranged.find((e) => e.id === "summary")).toMatchObject({
+      x: 0,
+      y: 0,
+    });
+    expect(arranged.find((e) => e.id === "intro")).toMatchObject({
+      x: 760,
+      y: 0,
+    });
+    expect(arranged.find((e) => e.id === "shape")).toMatchObject({
+      x: 790,
+      y: 30,
+      frameId: "intro",
+    });
+    expect(arranged.find((e) => e.id === "unframed")).toMatchObject({
+      x: 820,
+      y: 40,
+    });
+    expect(
+      arranged.find((e) => e.id === "unframed")?.frameId ?? null,
+    ).toBeNull();
+    await dialog
+      .getByRole("button", { name: "2. Introduction", exact: true })
+      .click();
+    await expect
+      .poll(async () =>
+        dialog
+          .getByRole("img", { name: "Introduction" })
+          .evaluate(async (image: HTMLImageElement) =>
+            (await (await fetch(image.src)).text()).includes("#e03131"),
+          ),
+      )
+      .toBe(true);
+    await dialog.getByRole("button", { name: "Close presentation" }).click();
+    await page.locator(".excalidraw").focus();
+    await page.keyboard.press("ControlOrMeta+z");
+    await expect
+      .poll(
+        async () =>
+          (await getDrawing(request, drawing.id)).elements?.find(
+            (e) => e.id === "intro",
+          )?.x,
+      )
+      .toBe(0);
+    const undone = (await getDrawing(request, drawing.id)).elements!;
+    expect(undone.find((e) => e.id === "summary")?.x).toBe(800);
+    expect(undone.find((e) => e.id === "shape")?.x).toBe(30);
+    expect(undone.find((e) => e.id === "unframed")?.x).toBe(820);
+    await page.keyboard.press("ControlOrMeta+Shift+z");
+    await expect
+      .poll(
+        async () =>
+          (await getDrawing(request, drawing.id)).elements?.find(
+            (e) => e.id === "intro",
+          )?.x,
+      )
+      .toBe(760);
 
     await page.reload();
     await page
