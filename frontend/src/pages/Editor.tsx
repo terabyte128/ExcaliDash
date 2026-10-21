@@ -27,6 +27,7 @@ import { useKeyboardLayoutFix } from "./editor/useKeyboardLayoutFix";
 import { DEFAULT_GRID_STEP } from "../components/GridStepSelector";
 import { PresentationDialog } from "./editor/PresentationDialog";
 import { FrameAspectRatioGuide } from "./editor/FrameAspectRatioGuide";
+import { insertSlideTemplate } from "./editor/slideTemplates";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 export const Editor: React.FC = () => {
@@ -389,6 +390,14 @@ const ExcalidrawEditor: React.FC = () => {
         onPresentationOpen={() => {
           if (isReady) setPresentationAPI(excalidrawAPI.current);
         }}
+        onAddSlide={(template) => {
+          if (!canEdit || !isReady || isHistoryOpen || !excalidrawAPI.current)
+            return;
+          insertSlideTemplate(excalidrawAPI.current, template);
+          editorContainerRef.current
+            ?.querySelector<HTMLElement>(".excalidraw")
+            ?.focus();
+        }}
         onToggleAutoHide={handleToggleAutoHide}
         onToggleTheme={toggleTheme}
       />
@@ -398,6 +407,13 @@ const ExcalidrawEditor: React.FC = () => {
           canEdit={canEdit}
           drawingName={drawingName}
           onClose={() => setPresentationAPI(null)}
+          onEditCanvas={() => {
+            requestAnimationFrame(() =>
+              editorContainerRef.current
+                ?.querySelector<HTMLElement>(".excalidraw")
+                ?.focus(),
+            );
+          }}
         />
       )}
       <FrameAspectRatioGuide

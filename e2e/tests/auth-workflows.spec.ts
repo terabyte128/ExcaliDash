@@ -381,6 +381,9 @@ test("view-only guests can present frames but cannot edit notes or order", async
     await expect(
       page.getByRole("button", { name: /Move Shared slide/ }),
     ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Add slide", exact: true }),
+    ).toHaveCount(0);
     await page.getByRole("button", { name: "Present", exact: true }).click();
     await expect(page.getByRole("img", { name: "Shared slide" })).toBeVisible();
     await page.getByRole("button", { name: "Toggle speaker notes" }).click();

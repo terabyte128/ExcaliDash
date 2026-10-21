@@ -21,6 +21,8 @@ import { ShareModal } from "../../components/ShareModal";
 import { UserAvatar as ProfileAvatar } from "../../components/UserAvatar";
 import type { UserIdentity } from "../../utils/identity";
 import { UIOptions, validateEmbeddableUrl } from "./shared";
+import type { SlideTemplateId } from "./slideTemplates";
+import { AddSlideDropdown } from "./AddSlideDropdown";
 
 interface Peer extends UserIdentity {
   isActive: boolean;
@@ -73,6 +75,7 @@ type EditorViewProps = {
   onCloseShare: () => void;
   onHistoryOpen: () => void;
   onPresentationOpen: () => void;
+  onAddSlide: (template: SlideTemplateId) => void;
   onToggleAutoHide: () => void;
   onToggleTheme: () => void;
 };
@@ -144,6 +147,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   onCloseShare,
   onHistoryOpen,
   onPresentationOpen,
+  onAddSlide,
   onToggleAutoHide,
   onToggleTheme,
 }) => (
@@ -159,7 +163,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
   >
     <header
       className={clsx(
-        "h-16 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 flex items-center px-4 justify-between z-10 fixed top-0 left-0 right-0 transition-all duration-300",
+        "h-16 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 flex items-center px-4 justify-between z-10 fixed top-0 left-0 right-0 transition-all duration-300 focus-within:translate-y-0",
         isHeaderVisible || isShareOpen ? "translate-y-0" : "-translate-y-full",
       )}
     >
@@ -234,6 +238,14 @@ export const EditorView: React.FC<EditorViewProps> = ({
         >
           <Presentation size={20} />
         </button>
+        {canEdit && (
+          <AddSlideDropdown
+            disabled={
+              isSceneLoading || !!loadError || isHistoryOpen || isShareOpen
+            }
+            onSelect={onAddSlide}
+          />
+        )}
         {accessLevel === "owner" && id ? (
           <div className="relative inline-flex">
             <button

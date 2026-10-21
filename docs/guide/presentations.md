@@ -13,6 +13,20 @@ description: Present your Excalidraw frames as fullscreen slides with saved spea
 4. Click **Present** to start at the selected slide in fullscreen. If your
    browser blocks fullscreen, playback continues in the current window.
 
+## Built-in slide templates
+
+Use the **Add slide** dropdown in the editor toolbar to choose **Title slide** (title and subtitle),
+**Title only**, **Title + list**, **Title + list + image**, or **Blank slide**.
+The image layout leaves the right-hand area blank for your own content.
+The same layouts are also available in **Presentation → Add slide**.
+
+Templates use your selected frame ratio, with **16:9** as the default when it is
+Freeform. New slides are placed to the right of existing content and appended to
+the presentation order. After insertion, the editor selects and zooms to the new
+slide. Text and frames are ordinary Excalidraw elements: double-click text to edit
+it, or move and resize elements freely. Undo removes the entire inserted slide
+in one step. Adding templates requires edit access.
+
 ## Frame ratio prototype
 
 Select the native **Frame tool** (`F`) to show the **New frame ratio** control

@@ -10,10 +10,13 @@ import {
   Expand,
   FileText,
   Play,
+  Plus,
   X,
 } from "lucide-react";
 import { getSlides, moveSlide, updateSlideMetadata } from "./presentation";
 import { SlidePreview, type PresentationScene } from "./SlidePreview";
+import { SlideTemplatePicker } from "./SlideTemplatePicker";
+import { insertSlideTemplate } from "./slideTemplates";
 
 function readScene(api: ExcalidrawImperativeAPI): PresentationScene {
   const { viewBackgroundColor, theme } = api.getAppState();
@@ -29,11 +32,13 @@ export function PresentationDialog({
   canEdit,
   drawingName,
   onClose,
+  onEditCanvas,
 }: {
   api: ExcalidrawImperativeAPI;
   canEdit: boolean;
   drawingName: string;
   onClose: () => void;
+  onEditCanvas: () => void;
 }) {
   const [scene, setScene] = useState(() => readScene(api));
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -42,6 +47,7 @@ export function PresentationDialog({
   const [showNotes, setShowNotes] = useState(false);
   const [fullscreenMessage, setFullscreenMessage] = useState("");
   const [controlsVisible, setControlsVisible] = useState(true);
+  const [showTemplates, setShowTemplates] = useState(false);
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const exitButton = useRef<HTMLButtonElement>(null);
@@ -241,6 +247,16 @@ export function PresentationDialog({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {!playback && canEdit && (
+            <button
+              className="ui-button-secondary gap-2 px-3"
+              aria-expanded={showTemplates}
+              onClick={() => setShowTemplates(!showTemplates)}
+            >
+              <Plus size={16} />
+              Add slide
+            </button>
+          )}
           {playback ? (
             <>
               <button
@@ -280,6 +296,15 @@ export function PresentationDialog({
           </button>
         </div>
       </header>
+      {!playback && canEdit && showTemplates && (
+        <SlideTemplatePicker
+          onSelect={(template) => {
+            insertSlideTemplate(api, template);
+            onClose();
+            onEditCanvas();
+          }}
+        />
+      )}
       {fullscreenMessage && (
         <p
           role="status"
