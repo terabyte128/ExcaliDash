@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
@@ -17,6 +17,7 @@ import { getSlides, moveSlide, updateSlideMetadata } from "./presentation";
 import { SlidePreview, type PresentationScene } from "./SlidePreview";
 import { SlideTemplatePicker } from "./SlideTemplatePicker";
 import { insertSlideTemplate } from "./slideTemplates";
+import { getPresentationStops, getRevealedElements } from "./slideReveals";
 
 function readScene(api: ExcalidrawImperativeAPI): PresentationScene {
   const { viewBackgroundColor, theme } = api.getAppState();
@@ -52,14 +53,34 @@ export function PresentationDialog({
   const root = useRef<HTMLDivElement>(null);
   const exitButton = useRef<HTMLButtonElement>(null);
   const slides = getSlides((playback || scene).elements);
+  const stops = useMemo(
+    () => getPresentationStops((playback || scene).elements),
+    [playback, scene],
+  );
+  const stop = stops[position];
   const selectedIndex = Math.max(
     0,
     slides.findIndex((slide) => slide.frame.id === selectedId),
   );
-  const index = playback
-    ? Math.min(position, slides.length - 1)
-    : selectedIndex;
+  const index = playback ? (stop?.slideIndex ?? 0) : selectedIndex;
   const slide = slides[index];
+  const previewScene = useMemo(() => {
+    if (!playback) return scene;
+    const current = getPresentationStops(playback.elements)[position];
+    const frame = getSlides(playback.elements)[current?.slideIndex ?? 0]?.frame;
+    return frame
+      ? {
+          ...playback,
+          elements: getRevealedElements(
+            playback.elements,
+            frame.id,
+            current?.step ?? 0,
+          ),
+        }
+      : playback;
+  }, [playback, scene, position]);
+  const advance = () =>
+    setPosition((current) => Math.min(stops.length - 1, current + 1));
 
   const revealControls = useCallback(() => {
     setControlsVisible(true);
@@ -167,10 +188,10 @@ export function PresentationDialog({
           event.key === "Home"
             ? 0
             : event.key === "End"
-              ? slides.length - 1
+              ? stops.length - 1
               : Math.max(
                   0,
-                  Math.min(slides.length - 1, current + (next ? 1 : -1)),
+                  Math.min(stops.length - 1, current + (next ? 1 : -1)),
                 ),
         );
       } else if (event.key.toLowerCase() === "n") {
@@ -180,7 +201,7 @@ export function PresentationDialog({
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [leavePlayback, onClose, playback, slides.length, revealControls]);
+  }, [leavePlayback, onClose, playback, stops.length, revealControls]);
 
   function requestFullscreen() {
     setFullscreenMessage("");
@@ -199,8 +220,16 @@ export function PresentationDialog({
 
   function start() {
     // Excalidraw may mutate elements/files in place as remote changes arrive.
-    setPlayback(structuredClone(readScene(api)));
-    setPosition(selectedIndex);
+    const snapshot = structuredClone(readScene(api));
+    setPlayback(snapshot);
+    setPosition(
+      Math.max(
+        0,
+        getPresentationStops(snapshot.elements).findIndex(
+          (item) => item.slideIndex === selectedIndex,
+        ),
+      ),
+    );
     setShowNotes(false);
     requestFullscreen();
     exitButton.current?.focus();
@@ -395,8 +424,13 @@ export function PresentationDialog({
             <div
               className={`min-h-0 flex-1 bg-neutral-900 ${playback ? "" : "p-3 sm:p-6"}`}
               data-testid="presentation-slide"
+              onClick={playback ? advance : undefined}
             >
-              <SlidePreview scene={playback || scene} slide={slide} />
+              <SlidePreview
+                key={playback ? "playback" : "setup"}
+                scene={previewScene}
+                slide={slide}
+              />
             </div>
             {(!playback || showNotes) && (
               <section
@@ -444,14 +478,16 @@ export function PresentationDialog({
                 className={`absolute inset-x-0 bottom-0 z-10 flex items-center justify-between gap-2 bg-white/95 px-4 py-3 transition-opacity dark:bg-neutral-950/95 ${controlsVisible ? "opacity-100" : "pointer-events-none opacity-0"}`}
               >
                 <span className="text-xs text-slate-500 dark:text-neutral-400">
-                  ← → to navigate · Esc to exit
+                  Click or ← → to navigate · Esc to exit
                 </span>
                 <div className="flex items-center gap-3">
                   <button
                     className="ui-toolbar-button"
                     aria-label="Previous slide"
-                    disabled={index === 0}
-                    onClick={() => setPosition(index - 1)}
+                    disabled={position === 0}
+                    onClick={() =>
+                      setPosition((current) => Math.max(0, current - 1))
+                    }
                   >
                     <ChevronLeft size={20} />
                   </button>
@@ -460,12 +496,20 @@ export function PresentationDialog({
                     className="whitespace-nowrap text-sm"
                   >
                     {index + 1} / {slides.length}
+                    {!!stop?.revealCount && (
+                      <span
+                        className="ml-2 text-xs text-slate-500"
+                        data-testid="reveal-progress"
+                      >
+                        Reveal {stop.revealIndex} / {stop.revealCount}
+                      </span>
+                    )}
                   </span>
                   <button
                     className="ui-toolbar-button"
                     aria-label="Next slide"
-                    disabled={index === slides.length - 1}
-                    onClick={() => setPosition(index + 1)}
+                    disabled={position === stops.length - 1}
+                    onClick={advance}
                   >
                     <ChevronRight size={20} />
                   </button>

@@ -27,6 +27,7 @@ import { useKeyboardLayoutFix } from "./editor/useKeyboardLayoutFix";
 import { DEFAULT_GRID_STEP } from "../components/GridStepSelector";
 import { PresentationDialog } from "./editor/PresentationDialog";
 import { FrameAspectRatioGuide } from "./editor/FrameAspectRatioGuide";
+import { RevealStepControl } from "./editor/RevealStepControl";
 import { insertSlideTemplate } from "./editor/slideTemplates";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
@@ -420,6 +421,11 @@ const ExcalidrawEditor: React.FC = () => {
         apiRef={excalidrawAPI}
         isReady={isReady}
         enabled={canEdit && !isHistoryOpen && !presentationAPI}
+      />
+      <RevealStepControl
+        apiRef={excalidrawAPI}
+        isReady={isReady}
+        enabled={canEdit && !isHistoryOpen && !presentationAPI && !isShareOpen}
       />
       <EditorDialogs
         drawingId={id}

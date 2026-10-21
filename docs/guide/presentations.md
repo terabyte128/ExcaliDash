@@ -54,6 +54,25 @@ it relies on Excalidraw 0.18.1 calling that callback before frame-child assignme
 and the history commit. The browser regression test covers this ordering, undo,
 redo, and peer delivery, and should be run when upgrading Excalidraw.
 
+## Appear on click
+
+Select an element or group **inside a frame** on the canvas. The **Appear on
+click** control lets you choose **Always visible**, an existing click step, or a
+new click step. Assign several selections to the same step to reveal them together.
+Choose an earlier/later step to change the order, or Always visible to remove a reveal.
+
+Groups and bound text labels appear together. Connected arrows can be assigned
+separately. A text element reveals as a whole, including all its bullet points.
+Selections must belong to one frame; selecting the frame itself doesn't assign
+reveals. Everything remains visible while editing and in presentation setup.
+
+During playback, **click the slide**, press **Space**, or use a forward navigation
+key/button to reveal the next step. After the final reveal, advance to the next
+slide. Backward navigation hides the last reveal, or returns to the previous slide
+with all its content visible. Empty steps are skipped. Restarting playback resets
+reveals. Assignments save with the drawing and support undo, sharing, and history.
+Moving an element to a different frame resets its effective reveal to Always visible.
+
 ## Playback controls
 
 - **Right / Down / Page Down / Space**: next slide.
