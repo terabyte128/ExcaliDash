@@ -24,6 +24,7 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.21",
+    "pdfjs-dist": "~5.4.624",
     "typescript": "~5.9.3"
   }
 }

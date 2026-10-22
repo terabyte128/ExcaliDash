@@ -18,6 +18,17 @@ description: Present your Excalidraw frames as fullscreen slides with saved spea
 4. Click **Present** to start at the selected slide in fullscreen. If your
    browser blocks fullscreen, playback continues in the current window.
 
+## Export a PDF
+
+Choose **Presentation → Export PDF** to download the complete presentation.
+Each slide becomes one PDF page in presentation order, preserving its aspect
+ratio, background, text, and images. All click-to-reveal content is visible;
+there are no extra pages for animation steps. Speaker notes are not included.
+
+Pages use high-resolution images (2× the frame size, capped at 4096 pixels per
+side) to preserve Excalidraw's fonts and appearance. Export takes a snapshot of
+the drawing when you click, so later edits do not change a PDF in progress.
+
 ## Built-in slide templates
 
 Use the **Add slide** dropdown in the editor toolbar to choose **Title slide** (title and subtitle),

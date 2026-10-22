@@ -7,6 +7,7 @@ import {
   ArrowUp,
   ChevronLeft,
   ChevronRight,
+  Download,
   Expand,
   FileText,
   Play,
@@ -14,7 +15,8 @@ import {
   X,
 } from "lucide-react";
 import { getSlides, moveSlide, updateSlideMetadata } from "./presentation";
-import { SlidePreview, type PresentationScene } from "./SlidePreview";
+import { SlidePreview } from "./SlidePreview";
+import type { PresentationScene } from "./presentationRendering";
 import { SlideTemplatePicker } from "./SlideTemplatePicker";
 import { insertSlideTemplate } from "./slideTemplates";
 import { getPresentationStops, getRevealedElements } from "./slideReveals";
@@ -53,6 +55,12 @@ export function PresentationDialog({
   const [fullscreenMessage, setFullscreenMessage] = useState("");
   const [controlsVisible, setControlsVisible] = useState(true);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<{
+    completed: number;
+    total: number;
+  } | null>(null);
+  const [pdfError, setPdfError] = useState("");
+  const pdfExport = useRef<AbortController | null>(null);
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const exitButton = useRef<HTMLButtonElement>(null);
@@ -95,6 +103,7 @@ export function PresentationDialog({
   useEffect(
     () => () => {
       if (controlsTimer.current) clearTimeout(controlsTimer.current);
+      pdfExport.current?.abort();
     },
     [],
   );
@@ -275,6 +284,48 @@ export function PresentationDialog({
     });
   }
 
+  async function exportPdf() {
+    if (pdfExport.current) return;
+    const controller = new AbortController();
+    pdfExport.current = controller;
+    setPdfError("");
+    try {
+      const snapshot = structuredClone(readScene(api));
+      const total = getSlides(snapshot.elements).length;
+      setPdfProgress({ completed: 0, total });
+      const { createPresentationPdf } = await import("./presentationPdf");
+      const blob = await createPresentationPdf(
+        snapshot,
+        drawingName,
+        controller.signal,
+        (completed) => {
+          if (!controller.signal.aborted) setPdfProgress({ completed, total });
+        },
+      );
+      controller.signal.throwIfAborted();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${drawingName.trim() || "Presentation"}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      // Allow the browser to start the download before releasing the blob.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setPdfError(
+          error instanceof Error
+            ? `PDF export failed: ${error.message}`
+            : "PDF export failed. Please try again.",
+        );
+      }
+    } finally {
+      if (!controller.signal.aborted) setPdfProgress(null);
+      pdfExport.current = null;
+    }
+  }
+
   return createPortal(
     <div
       ref={root}
@@ -305,6 +356,18 @@ export function PresentationDialog({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {!playback && (
+            <button
+              className="ui-button-secondary gap-2 px-3"
+              onClick={() => void exportPdf()}
+              disabled={!slide || !!pdfProgress}
+              aria-label="Export PDF"
+              title="Export PDF — one page per slide, with all reveals visible"
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline">Export PDF</span>
+            </button>
+          )}
           {!playback && canEdit && (
             <button
               className="ui-button-secondary gap-2 px-3"
@@ -357,6 +420,22 @@ export function PresentationDialog({
           </button>
         </div>
       </header>
+      {!playback && pdfProgress && (
+        <p
+          role="status"
+          className="px-4 py-2 text-sm text-slate-500 dark:text-neutral-400"
+        >
+          Exporting PDF… {pdfProgress.completed} / {pdfProgress.total} slides
+        </p>
+      )}
+      {!playback && pdfError && (
+        <p
+          role="alert"
+          className="px-4 py-2 text-sm text-red-600 dark:text-red-400"
+        >
+          {pdfError}
+        </p>
+      )}
       {!playback && canEdit && showTemplates && (
         <SlideTemplatePicker
           onSelect={(template) => {

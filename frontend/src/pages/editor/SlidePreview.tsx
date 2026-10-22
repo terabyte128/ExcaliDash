@@ -1,15 +1,9 @@
 import { useEffect, useState } from "react";
-import { exportToSvg } from "@excalidraw/excalidraw";
-import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
-import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
-import { rehydrateSvgImages } from "../../utils/previewSvg";
+import {
+  renderSlideSvg,
+  type PresentationScene,
+} from "./presentationRendering";
 import type { Slide } from "./presentation";
-
-export type PresentationScene = {
-  elements: readonly ExcalidrawElement[];
-  files: BinaryFiles;
-  appState: Partial<AppState>;
-};
 
 export function SlidePreview({
   scene,
@@ -32,22 +26,9 @@ export function SlidePreview({
     let cancelled = false;
     let url: string | undefined;
     let committed = false;
-    void exportToSvg({
-      elements: scene.elements.filter((element) => !element.isDeleted),
-      files: scene.files,
-      exportingFrame: slide.frame,
-      exportPadding: 0,
-      appState: {
-        ...scene.appState,
-        exportBackground: true,
-        exportWithDarkMode: scene.appState.theme === "dark",
-      },
-    })
+    void renderSlideSvg(scene, slide.frame)
       .then(async (svg: SVGSVGElement) => {
         if (cancelled) return;
-        const imagesReady = await rehydrateSvgImages(svg);
-        if (cancelled) return;
-        if (!imagesReady) throw new Error("Unable to load slide images");
         url = URL.createObjectURL(
           new Blob([svg.outerHTML], { type: "image/svg+xml" }),
         );
