@@ -14,6 +14,95 @@ const frame = (id: string, name: string, x: number) => ({
   isDeleted: false,
 });
 
+test("images are visible in slide previews and playback", async ({
+  page,
+  request,
+}) => {
+  const drawing = await createDrawing(request, {
+    name: "E2E Presentation Images",
+    elements: [
+      frame("slide", "Image slide", 0),
+      {
+        id: "image",
+        type: "image",
+        fileId: "image-file",
+        frameId: "slide",
+        x: 40,
+        y: 40,
+        width: 100,
+        height: 100,
+        status: "saved",
+        scale: [1, 1],
+      },
+      {
+        id: "vector-image",
+        type: "image",
+        fileId: "vector-file",
+        frameId: "slide",
+        x: 200,
+        y: 40,
+        width: 100,
+        height: 100,
+        status: "saved",
+        scale: [1, 1],
+      },
+    ],
+    files: {
+      "image-file": {
+        id: "image-file",
+        mimeType: "image/png",
+        dataURL:
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==",
+        created: Date.now(),
+      },
+      "vector-file": {
+        id: "vector-file",
+        mimeType: "image/svg+xml",
+        dataURL: `data:image/svg+xml;base64,${Buffer.from(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#0000ff"/></svg>',
+        ).toString("base64")}`,
+        created: Date.now(),
+      },
+    },
+  });
+  try {
+    await page.goto(`/editor/${drawing.id}`);
+    await page
+      .getByRole("button", { name: "Presentation", exact: true })
+      .click();
+    const preview = page.getByRole("img", { name: "Image slide" });
+    const expectImagePixels = async () => {
+      await expect(preview).toBeVisible();
+      await expect
+        .poll(() =>
+          preview.evaluate(async (image: HTMLImageElement) => {
+            await image.decode();
+            const canvas = document.createElement("canvas");
+            canvas.width = image.naturalWidth;
+            canvas.height = image.naturalHeight;
+            const context = canvas.getContext("2d")!;
+            context.drawImage(image, 0, 0);
+            // Check painted pixels, not just SVG markup: external image hrefs
+            // are present in the old export but render as blank white areas.
+            return [90, 250].map((x) =>
+              Array.from(context.getImageData(x, 90, 1, 1).data),
+            );
+          }),
+        )
+        .toEqual([
+          [255, 0, 0, 255],
+          [0, 0, 255, 255],
+        ]);
+    };
+    await expectImagePixels();
+    await page.getByRole("button", { name: "Present", exact: true }).click();
+    await expectImagePixels();
+  } finally {
+    await page.goto("/");
+    await deleteDrawing(request, drawing.id);
+  }
+});
+
 test("frame presentations save notes/order and navigate without changing the scene", async ({
   page,
   request,

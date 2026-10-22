@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { exportToSvg } from "@excalidraw/excalidraw";
 import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
 import type { ExcalidrawElement } from "@excalidraw/excalidraw/element/types";
+import { rehydrateSvgImages } from "../../utils/previewSvg";
 import type { Slide } from "./presentation";
 
 export type PresentationScene = {
@@ -44,6 +45,9 @@ export function SlidePreview({
     })
       .then(async (svg: SVGSVGElement) => {
         if (cancelled) return;
+        const imagesReady = await rehydrateSvgImages(svg);
+        if (cancelled) return;
+        if (!imagesReady) throw new Error("Unable to load slide images");
         url = URL.createObjectURL(
           new Blob([svg.outerHTML], { type: "image/svg+xml" }),
         );

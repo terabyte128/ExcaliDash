@@ -84,12 +84,12 @@ export const previewHasOrphanedImages = (preview: string): boolean => {
   return doc.querySelector("defs > image") !== null;
 };
 
-// SVG image references need inline bytes to render reliably in thumbnails,
-// including files served through an authenticated endpoint or S3 redirect.
-export const rehydratePreviewSvg = async (preview: string): Promise<string> => {
-  const doc = new DOMParser().parseFromString(preview, "image/svg+xml");
-  if (doc.documentElement.tagName.toLowerCase() !== "svg") return preview;
-  const images = Array.from(doc.querySelectorAll("image"));
+// SVGs displayed as images cannot load external image references. Fetch only
+// the images included in this export, leaving its colors and geometry intact.
+// Return whether every image is embedded; thumbnails remain best-effort, while
+// presentation playback can surface a failed fetch instead of a blank image.
+export const rehydrateSvgImages = async (svg: Element): Promise<boolean> => {
+  const images = Array.from(svg.querySelectorAll("image"));
   const files = Object.fromEntries(
     images.map((image, index) => [
       String(index),
@@ -104,6 +104,15 @@ export const rehydratePreviewSvg = async (preview: string): Promise<string> => {
     images[Number(index)].setAttribute("href", file.dataURL);
     images[Number(index)].removeAttribute("xlink:href");
   }
+  return images.every((image) =>
+    /^data:image\//i.test(image.getAttribute("href") ?? ""),
+  );
+};
+
+export const rehydratePreviewSvg = async (preview: string): Promise<string> => {
+  const doc = new DOMParser().parseFromString(preview, "image/svg+xml");
+  if (doc.documentElement.tagName.toLowerCase() !== "svg") return preview;
+  await rehydrateSvgImages(doc.documentElement);
   return normalizePreviewSvg(doc.documentElement.outerHTML) ?? preview;
 };
 
