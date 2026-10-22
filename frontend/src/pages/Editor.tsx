@@ -1,6 +1,10 @@
 import * as api from "../api";
 import { flushSync } from "react-dom";
-import { getSlides } from "./editor/presentation";
+import {
+  getActiveSlideId,
+  getSlides,
+  isPresentationShortcut,
+} from "./editor/presentation";
 import { toast } from "sonner";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -75,6 +79,9 @@ const ExcalidrawEditor: React.FC = () => {
     useState<ExcalidrawImperativeAPI | null>(null);
   const [startPresentationImmediately, setStartPresentationImmediately] =
     useState(false);
+  const [presentationStartSlideId, setPresentationStartSlideId] = useState<
+    string | null
+  >(null);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const [historyPreview, setHistoryPreview] =
@@ -351,16 +358,7 @@ const ExcalidrawEditor: React.FC = () => {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.key !== "Enter" ||
-        !(event.metaKey || event.ctrlKey) ||
-        event.altKey ||
-        event.shiftKey ||
-        event.repeat ||
-        event.isComposing ||
-        event.defaultPrevented
-      )
-        return;
+      if (!isPresentationShortcut(event)) return;
       if (
         !isReady ||
         isSceneLoading ||
@@ -396,6 +394,7 @@ const ExcalidrawEditor: React.FC = () => {
           (element: { id: string }) => state.selectedElementIds[element.id],
         );
       if (
+        !event.shiftKey &&
         selected.length === 1 &&
         ["line", "arrow", "image"].includes(selected[0].type)
       )
@@ -408,6 +407,14 @@ const ExcalidrawEditor: React.FC = () => {
       }
       // Mount within the keyboard gesture so the browser permits fullscreen.
       flushSync(() => {
+        setPresentationStartSlideId(
+          event.shiftKey
+            ? getActiveSlideId(
+                editor.getSceneElements(),
+                state.selectedElementIds,
+              )
+            : null,
+        );
         setStartPresentationImmediately(true);
         setPresentationAPI(editor);
       });
@@ -475,6 +482,7 @@ const ExcalidrawEditor: React.FC = () => {
         onPresentationOpen={() => {
           if (isReady) {
             setStartPresentationImmediately(false);
+            setPresentationStartSlideId(null);
             setPresentationAPI(excalidrawAPI.current);
           }
         }}
@@ -493,6 +501,7 @@ const ExcalidrawEditor: React.FC = () => {
         <PresentationDialog
           api={presentationAPI}
           startImmediately={startPresentationImmediately}
+          initialSlideId={presentationStartSlideId}
           canEdit={canEdit}
           drawingName={drawingName}
           onClose={() => setPresentationAPI(null)}

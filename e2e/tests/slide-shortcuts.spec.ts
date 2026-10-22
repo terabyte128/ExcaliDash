@@ -68,6 +68,8 @@ test("slide shortcuts open layouts, repeat the last template, and respect text e
     await expect(text).toBeVisible();
     await page.keyboard.press("Shift+KeyN");
     await expect(text).toHaveValue("N");
+    await page.keyboard.press("Shift+Enter");
+    await expect(text).toHaveValue("N\n");
     await expect(menu).toHaveCount(0);
     await page.keyboard.press("Shift+Alt+KeyN");
     await expect(text).toBeVisible();
@@ -85,6 +87,10 @@ test("slide shortcuts open layouts, repeat the last template, and respect text e
     await expect(
       dialog.getByLabel("Speaker notes", { exact: true }),
     ).toHaveValue("NotesN");
+    await page.keyboard.press("Shift+Enter");
+    await expect(
+      dialog.getByLabel("Speaker notes", { exact: true }),
+    ).toHaveValue("NotesN\n");
     await dialog.getByRole("button", { name: "Close presentation" }).focus();
     await page.keyboard.press("Shift+Alt+KeyN");
     await expect(dialog).toBeVisible();
@@ -103,6 +109,117 @@ test("slide shortcuts open layouts, repeat the last template, and respect text e
     await expect
       .poll(() => page.evaluate(() => !!document.fullscreenElement))
       .toBe(true);
+  } finally {
+    await page.goto("/");
+    await deleteDrawing(request, drawing.id);
+  }
+});
+
+test("Shift+Enter starts at the active frame or its contents, with a first-slide fallback", async ({
+  page,
+  request,
+}) => {
+  const drawing = await createDrawing(request, {
+    name: "Active slide shortcut",
+    elements: [
+      {
+        id: "second",
+        type: "frame",
+        name: "Second",
+        x: 800,
+        y: 0,
+        width: 640,
+        height: 360,
+        customData: { excalidashPresentation: { order: 1 } },
+      },
+      {
+        id: "first",
+        type: "frame",
+        name: "First",
+        x: 0,
+        y: 0,
+        width: 640,
+        height: 360,
+        customData: { excalidashPresentation: { order: 0 } },
+      },
+      {
+        id: "reveal-first",
+        type: "rectangle",
+        x: 40,
+        y: 40,
+        width: 100,
+        height: 100,
+        frameId: "first",
+        customData: { excalidashReveal: { frameId: "first", step: 1 } },
+      },
+      {
+        id: "inside-second",
+        type: "rectangle",
+        x: 840,
+        y: 40,
+        width: 100,
+        height: 100,
+        frameId: "second",
+        customData: { excalidashReveal: { frameId: "second", step: 1 } },
+      },
+      {
+        id: "outside",
+        type: "rectangle",
+        x: 1600,
+        y: 40,
+        width: 100,
+        height: 100,
+      },
+    ],
+  });
+  try {
+    await page.goto(`/editor/${drawing.id}`);
+    await expect(
+      page.getByRole("button", { name: "Presentation", exact: true }),
+    ).toBeEnabled();
+    const playback = page.getByRole("dialog", {
+      name: "Presentation playback",
+    });
+    const setup = page.getByRole("dialog", {
+      name: "Presentation",
+      exact: true,
+    });
+    for (const [ids, title] of [
+      [["second"], "Second"],
+      [["inside-second"], "Second"],
+      [[], "First"],
+      [["outside"], "First"],
+      [["first", "second"], "First"],
+    ] as const) {
+      await page.evaluate((ids) => {
+        (window as any).__EXCALIDASH_EXCALIDRAW_API__.updateScene({
+          appState: {
+            selectedElementIds: Object.fromEntries(ids.map((id) => [id, true])),
+          },
+        });
+      }, ids);
+      await page.locator(".excalidraw").focus();
+      await page.keyboard.press("Shift+Enter");
+      await expect(
+        playback.getByRole("img", { name: title, exact: true }),
+      ).toBeVisible();
+      await expect(playback.getByTestId("reveal-progress")).toHaveText(
+        "Reveal 0 / 1",
+      );
+      await expect
+        .poll(() => page.evaluate(() => !!document.fullscreenElement))
+        .toBe(true);
+      await page.keyboard.press("Escape");
+      await setup.getByRole("button", { name: "Close presentation" }).click();
+    }
+    await page
+      .getByRole("button", { name: "Presentation", exact: true })
+      .click();
+    await setup.getByRole("button", { name: "2. Second", exact: true }).click();
+    await page.keyboard.press("Shift+Enter");
+    await expect(
+      playback.getByRole("img", { name: "Second", exact: true }),
+    ).toBeVisible();
   } finally {
     await page.goto("/");
     await deleteDrawing(request, drawing.id);

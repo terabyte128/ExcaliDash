@@ -14,7 +14,12 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { getSlides, moveSlide, updateSlideMetadata } from "./presentation";
+import {
+  getSlides,
+  isPresentationShortcut,
+  moveSlide,
+  updateSlideMetadata,
+} from "./presentation";
 import { SlidePreview } from "./SlidePreview";
 import type { PresentationScene } from "./presentationRendering";
 import { SlideTemplatePicker } from "./SlideTemplatePicker";
@@ -37,6 +42,7 @@ export function PresentationDialog({
   onClose,
   onEditCanvas,
   startImmediately = false,
+  initialSlideId = null,
 }: {
   api: ExcalidrawImperativeAPI;
   canEdit: boolean;
@@ -44,13 +50,24 @@ export function PresentationDialog({
   onClose: () => void;
   onEditCanvas: () => void;
   startImmediately?: boolean;
+  initialSlideId?: string | null;
 }) {
   const [scene, setScene] = useState(() => readScene(api));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSlideId);
   const [playback, setPlayback] = useState<PresentationScene | null>(() =>
     startImmediately ? structuredClone(readScene(api)) : null,
   );
-  const [position, setPosition] = useState(0);
+  const [position, setPosition] = useState(() => {
+    const index = getSlides(scene.elements).findIndex(
+      (slide) => slide.frame.id === initialSlideId,
+    );
+    return Math.max(
+      0,
+      getPresentationStops(scene.elements).findIndex(
+        (stop) => stop.slideIndex === index,
+      ),
+    );
+  });
   const [showNotes, setShowNotes] = useState(false);
   const [fullscreenMessage, setFullscreenMessage] = useState("");
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -164,15 +181,7 @@ export function PresentationDialog({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        !playback &&
-        event.key === "Enter" &&
-        (event.metaKey || event.ctrlKey) &&
-        !event.altKey &&
-        !event.shiftKey &&
-        !event.repeat &&
-        !event.isComposing
-      ) {
+      if (!playback && isPresentationShortcut(event)) {
         const target =
           event.target instanceof HTMLElement ? event.target : null;
         if (
@@ -402,8 +411,8 @@ export function PresentationDialog({
               className="ui-button-primary gap-2 px-4"
               onClick={start}
               data-start-presentation
-              aria-keyshortcuts="Meta+Enter Control+Enter"
-              title="Start presentation (Cmd/Ctrl+Enter)"
+              aria-keyshortcuts="Meta+Enter Control+Enter Shift+Enter"
+              title="Start from selected slide (Shift+Enter or Cmd/Ctrl+Enter)"
               disabled={!slide}
             >
               <Play size={16} />

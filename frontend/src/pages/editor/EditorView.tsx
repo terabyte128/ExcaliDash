@@ -233,7 +233,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
           onClick={onPresentationOpen}
           disabled={isSceneLoading || !!loadError || isHistoryOpen}
           className="ui-toolbar-button"
-          title="Presentation · Cmd/Ctrl+Enter to start"
+          title="Presentation · Cmd/Ctrl+Enter from beginning · Shift+Enter from selected slide"
           aria-label="Presentation"
         >
           <Presentation size={20} />

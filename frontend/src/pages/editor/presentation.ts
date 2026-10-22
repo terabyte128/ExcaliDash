@@ -42,6 +42,36 @@ export function getSlides(elements: readonly ExcalidrawElement[]): Slide[] {
   );
 }
 
+export function getActiveSlideId(
+  elements: readonly ExcalidrawElement[],
+  selected: Readonly<Record<string, boolean>>,
+): string | null {
+  const frames = new Set(
+    elements
+      .filter((element) => !element.isDeleted && selected[element.id])
+      .map((element) =>
+        element.type === "frame" ? element.id : element.frameId,
+      ),
+  );
+  if (frames.size !== 1) return null;
+  return (
+    getSlides(elements).find((slide) => frames.has(slide.frame.id))?.frame.id ??
+    null
+  );
+}
+
+export function isPresentationShortcut(event: KeyboardEvent): boolean {
+  return (
+    event.key === "Enter" &&
+    !event.altKey &&
+    !event.repeat &&
+    !event.isComposing &&
+    !event.defaultPrevented &&
+    ((event.shiftKey && !event.metaKey && !event.ctrlKey) ||
+      (!event.shiftKey && (event.metaKey || event.ctrlKey)))
+  );
+}
+
 export function updateSlideMetadata(
   elements: readonly ExcalidrawElement[],
   updates: ReadonlyMap<string, { notes?: string; order?: number }>,
